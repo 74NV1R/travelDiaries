@@ -5,7 +5,9 @@ import { useEffect, useState } from "react"
 import styles from "./Form.module.css"
 import Button from "./Button"
 import BackButton from "./BackButton";
-import useUrlPosition from "../hooks/useUrlPosition";
+import useUrlPosition from "../hooks/useUrlPosition"
+import Message from './Message'
+import Spinner from './Spinner'
 
 export function convertToEmoji(countryCode) {
   const codePoints = countryCode
@@ -23,9 +25,12 @@ function Form() {
 
   const [isLoadingGeocoding, setIsLoadingGeocoding] = useState(false)
   const [cityName, setCityName] = useState("")
-  const [countryName, setCountryName] = useState("")
+  const [country, setCountry] = useState("")
   const [date, setDate] = useState(new Date())
   const [notes, setNotes] = useState("")
+
+  const [emoji, setEmoji] = useState('')
+  const [geoCodingError, setGeoCodingError] = useState('')
 
   useEffect(function () {
     async function fetchCityData() {
@@ -33,12 +38,13 @@ function Form() {
         setIsLoadingGeocoding(true)
         const res = await fetch(`${base_url}?latitude=${lat}&longitude=${lng}`)
         const data = await res.json()
-        //console.log(data)
-        setCityName(data.city || data.locality || "")
-        setCountryName(data.countryName)
 
+        if (!data.countryCode) throw new Error('Not a city')
+        setCityName(data.city || data.locality || "")
+        setCountry(data.countryName)
+        setEmoji(convertToEmoji(data.countryCode))
       } catch (err) {
-        setIsLoadingGeocoding(false)
+        setGeoCodingError(err.message)
       } finally {
         setIsLoadingGeocoding(false)
       }
@@ -46,6 +52,10 @@ function Form() {
 
     fetchCityData()
   }, [lat, lng])
+
+  if (isLoadingGeocoding) return <Spinner />
+
+  if (geoCodingError) return <Message message={geoCodingError} />
 
   return (
     <form className={styles.form}>
@@ -56,7 +66,7 @@ function Form() {
           onChange={(e) => setCityName(e.target.value)}
           value={cityName}
         />
-        {/* <span className={styles.flag}>{emoji}</span> */}
+        <span className={styles.flag}>{emoji}</span>
       </div>
 
       <div className={styles.row}>
